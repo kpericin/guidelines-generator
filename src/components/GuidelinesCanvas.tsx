@@ -7,7 +7,15 @@ export interface GuidelinesCanvasRef {
 
 export const GuidelinesCanvas = forwardRef<GuidelinesCanvasRef, object>(
   (_, ref) => {
-    const { width, height, orientation } = useGuidelinesProperties();
+    const {
+      width,
+      height,
+      orientation,
+      marginTop,
+      marginBottom,
+      marginLeft,
+      marginRight,
+    } = useGuidelinesProperties();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -16,6 +24,15 @@ export const GuidelinesCanvas = forwardRef<GuidelinesCanvasRef, object>(
         // At 300 DPI (print quality): 1mm = 300/25.4 pixels ≈ 11.811 pixels
         const DPI = 300;
         const MM_TO_PX = DPI / 25.4;
+
+        // Get theme colors from CSS variables
+        const root = document.documentElement;
+        const marginColor =
+          getComputedStyle(root).getPropertyValue('--muted').trim() ||
+          'hsl(0 0% 96.1%)';
+        const borderColor =
+          getComputedStyle(root).getPropertyValue('--border').trim() ||
+          'hsl(0 0% 89.8%)';
 
         // Use stored dimensions directly (already swapped based on orientation)
         const widthMM: number = width;
@@ -38,9 +55,46 @@ export const GuidelinesCanvas = forwardRef<GuidelinesCanvasRef, object>(
         exportCtx.fillStyle = '#FFFFFF';
         exportCtx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-        // Draw rectangle: 50x50mm, light blue background, black border, centered
-        const x = (canvasWidth - rectSize) / 2;
-        const y = (canvasHeight - rectSize) / 2;
+        // Calculate drawable area (content area within margins)
+        const marginTopPx = Math.round(marginTop * MM_TO_PX);
+        const marginBottomPx = Math.round(marginBottom * MM_TO_PX);
+        const marginLeftPx = Math.round(marginLeft * MM_TO_PX);
+        const marginRightPx = Math.round(marginRight * MM_TO_PX);
+
+        const drawableWidth = canvasWidth - marginLeftPx - marginRightPx;
+        const drawableHeight = canvasHeight - marginTopPx - marginBottomPx;
+
+        // Draw margin area using theme color
+        exportCtx.fillStyle = marginColor;
+        exportCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+        // Draw content area (white background)
+        exportCtx.fillStyle = '#FFFFFF';
+        exportCtx.fillRect(
+          marginLeftPx,
+          marginTopPx,
+          drawableWidth,
+          drawableHeight
+        );
+
+        // Draw margin border using theme color
+        exportCtx.strokeStyle = borderColor;
+        exportCtx.lineWidth = Math.round(0.5 * MM_TO_PX);
+        exportCtx.strokeRect(
+          marginLeftPx,
+          marginTopPx,
+          drawableWidth,
+          drawableHeight
+        );
+
+        // Draw paper border
+        exportCtx.strokeStyle = borderColor;
+        exportCtx.lineWidth = Math.round(1 * MM_TO_PX);
+        exportCtx.strokeRect(0, 0, canvasWidth, canvasHeight);
+
+        // Draw rectangle: 50x50mm, light blue background, black border, centered in drawable area
+        const x = marginLeftPx + (drawableWidth - rectSize) / 2;
+        const y = marginTopPx + (drawableHeight - rectSize) / 2;
 
         exportCtx.fillStyle = '#ADD8E6'; // Light blue
         exportCtx.fillRect(x, y, rectSize, rectSize);
@@ -157,11 +211,15 @@ export const GuidelinesCanvas = forwardRef<GuidelinesCanvasRef, object>(
         // Clear canvas
         ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-        // Fill with white background
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        // Get theme colors from CSS variables
+        const root = document.documentElement;
+        const marginColor =
+          getComputedStyle(root).getPropertyValue('--muted').trim() ||
+          'hsl(0 0% 96.1%)';
+        const borderColor =
+          getComputedStyle(root).getPropertyValue('--border').trim() ||
+          'hsl(0 0% 89.8%)';
 
-        // Draw rectangle: 50x50mm scaled, light blue background, black border, centered
         // Calculate scale: canvas dimensions represent paper dimensions in mm
         // Since canvas maintains aspect ratio, both scales should be equal
         const scaleX = canvasWidth / widthMM; // pixels per mm in X direction
@@ -169,10 +227,43 @@ export const GuidelinesCanvas = forwardRef<GuidelinesCanvasRef, object>(
         // Use the average to ensure square stays square (they should be equal anyway)
         const scale = (scaleX + scaleY) / 2;
 
+        // Calculate margin positions in canvas pixels
+        const marginTopPx = marginTop * scale;
+        const marginBottomPx = marginBottom * scale;
+        const marginLeftPx = marginLeft * scale;
+        const marginRightPx = marginRight * scale;
+
+        const drawableWidth = canvasWidth - marginLeftPx - marginRightPx;
+        const drawableHeight = canvasHeight - marginTopPx - marginBottomPx;
+
+        // Draw margin area using theme color
+        ctx.fillStyle = marginColor;
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+        // Draw content area (white background)
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(marginLeftPx, marginTopPx, drawableWidth, drawableHeight);
+
+        // Draw margin border using theme color
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = Math.max(1, scale * 0.5);
+        ctx.strokeRect(
+          marginLeftPx,
+          marginTopPx,
+          drawableWidth,
+          drawableHeight
+        );
+
+        // Draw paper border
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = Math.max(1, scale);
+        ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
+
+        // Draw rectangle: 50x50mm scaled, light blue background, black border, centered in drawable area
         const rectSizeMM = 50;
         const rectSize = rectSizeMM * scale;
-        const x = (canvasWidth - rectSize) / 2;
-        const y = (canvasHeight - rectSize) / 2;
+        const x = marginLeftPx + (drawableWidth - rectSize) / 2;
+        const y = marginTopPx + (drawableHeight - rectSize) / 2;
 
         ctx.fillStyle = '#ADD8E6'; // Light blue
         ctx.fillRect(x, y, rectSize, rectSize);
@@ -188,7 +279,15 @@ export const GuidelinesCanvas = forwardRef<GuidelinesCanvasRef, object>(
       return () => {
         window.removeEventListener('resize', resizeCanvas);
       };
-    }, [width, height, orientation]);
+    }, [
+      width,
+      height,
+      orientation,
+      marginTop,
+      marginBottom,
+      marginLeft,
+      marginRight,
+    ]);
 
     return (
       <div

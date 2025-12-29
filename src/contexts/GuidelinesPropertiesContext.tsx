@@ -8,10 +8,20 @@ interface GuidelinesPropertiesContextType {
   orientation: Orientation;
   width: number;
   height: number;
+  marginTop: number;
+  marginBottom: number;
+  marginLeft: number;
+  marginRight: number;
+  marginsLinked: boolean;
   setPaperSize: (size: string) => void;
   setOrientation: (orientation: Orientation) => void;
   setWidth: (width: number) => void;
   setHeight: (height: number) => void;
+  setMarginTop: (margin: number) => void;
+  setMarginBottom: (margin: number) => void;
+  setMarginLeft: (margin: number) => void;
+  setMarginRight: (margin: number) => void;
+  setMarginsLinked: (linked: boolean) => void;
 }
 
 const GuidelinesPropertiesContext = createContext<
@@ -30,6 +40,11 @@ export function GuidelinesPropertiesProvider({
   const [orientation, setOrientation] = useState<Orientation>('portrait');
   const [width, setWidth] = useState<number>(defaultDimensions.width);
   const [height, setHeight] = useState<number>(defaultDimensions.height);
+  const [marginTop, setMarginTop] = useState<number>(10);
+  const [marginBottom, setMarginBottom] = useState<number>(10);
+  const [marginLeft, setMarginLeft] = useState<number>(10);
+  const [marginRight, setMarginRight] = useState<number>(10);
+  const [marginsLinked, setMarginsLinked] = useState<boolean>(true);
 
   return (
     <GuidelinesPropertiesContext.Provider
@@ -38,10 +53,20 @@ export function GuidelinesPropertiesProvider({
         orientation,
         width,
         height,
+        marginTop,
+        marginBottom,
+        marginLeft,
+        marginRight,
+        marginsLinked,
         setPaperSize,
         setOrientation,
         setWidth,
         setHeight,
+        setMarginTop,
+        setMarginBottom,
+        setMarginLeft,
+        setMarginRight,
+        setMarginsLinked,
       }}
     >
       {children}

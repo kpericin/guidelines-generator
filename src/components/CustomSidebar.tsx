@@ -5,7 +5,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
+import {
+  InputGroup,
+  InputGroupInput,
+  InputGroupAddon,
+} from '@/components/ui/input-group';
 import {
   FieldGroup,
   Field,
@@ -18,6 +22,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+import { Link, Link2Off } from 'lucide-react';
 import { useGuidelinesProperties } from '@/contexts/GuidelinesPropertiesContext';
 import { PAPER_SIZES } from '@/constants';
 import { isPaperSize } from '@/types';
@@ -30,10 +36,20 @@ export function CustomSidebar() {
     orientation,
     width,
     height,
+    marginTop,
+    marginBottom,
+    marginLeft,
+    marginRight,
+    marginsLinked,
     setPaperSize,
     setOrientation,
     setWidth,
     setHeight,
+    setMarginTop,
+    setMarginBottom,
+    setMarginLeft,
+    setMarginRight,
+    setMarginsLinked,
   } = useGuidelinesProperties();
   const handlePaperSizeChange = (size: string) => {
     setPaperSize(size);
@@ -100,9 +116,34 @@ export function CustomSidebar() {
     }
   };
 
+  const handleMarginChange = (value: string, setter: (val: number) => void) => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && numValue >= 0) {
+      setter(numValue);
+      // If linked, update all margins to the same value
+      if (marginsLinked) {
+        setMarginTop(numValue);
+        setMarginBottom(numValue);
+        setMarginLeft(numValue);
+        setMarginRight(numValue);
+      }
+    }
+  };
+
+  const handleToggleLinked = () => {
+    const newLinked = !marginsLinked;
+    setMarginsLinked(newLinked);
+    // If linking, set all margins to the current top margin
+    if (newLinked) {
+      setMarginBottom(marginTop);
+      setMarginLeft(marginTop);
+      setMarginRight(marginTop);
+    }
+  };
+
   return (
     <aside className="w-80 border-r bg-background flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         <Accordion type="single" collapsible defaultValue="paper-layout">
           <AccordionItem value="paper-layout">
             <AccordionTrigger>Paper & Layout</AccordionTrigger>
@@ -154,30 +195,140 @@ export function CustomSidebar() {
 
                 <div className="flex gap-2">
                   <Field className="flex-1">
-                    <FieldLabel>Width (mm)</FieldLabel>
+                    <FieldLabel>Width</FieldLabel>
                     <FieldContent>
-                      <Input
-                        type="number"
-                        value={width}
-                        onChange={(e) => handleWidthChange(e.target.value)}
-                        min="1"
-                        step="0.1"
-                      />
+                      <InputGroup>
+                        <InputGroupInput
+                          type="number"
+                          value={width}
+                          onChange={(e) => handleWidthChange(e.target.value)}
+                          min="1"
+                          step="1"
+                        />
+                        <InputGroupAddon align="inline-end">mm</InputGroupAddon>
+                      </InputGroup>
                     </FieldContent>
                   </Field>
 
                   <Field className="flex-1">
-                    <FieldLabel>Height (mm)</FieldLabel>
+                    <FieldLabel>Height</FieldLabel>
                     <FieldContent>
-                      <Input
-                        type="number"
-                        value={height}
-                        onChange={(e) => handleHeightChange(e.target.value)}
-                        min="1"
-                        step="0.1"
-                      />
+                      <InputGroup>
+                        <InputGroupInput
+                          type="number"
+                          value={height}
+                          onChange={(e) => handleHeightChange(e.target.value)}
+                          min="1"
+                          step="1"
+                        />
+                        <InputGroupAddon align="inline-end">mm</InputGroupAddon>
+                      </InputGroup>
                     </FieldContent>
                   </Field>
+                </div>
+
+                <div className="pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="text-sm font-medium">Margins</div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleToggleLinked}
+                      aria-label={
+                        marginsLinked ? 'Unlink margins' : 'Link margins'
+                      }
+                    >
+                      {marginsLinked ? (
+                        <Link className="h-4 w-4" />
+                      ) : (
+                        <Link2Off className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Field>
+                      <FieldLabel>Top</FieldLabel>
+                      <FieldContent>
+                        <InputGroup>
+                          <InputGroupInput
+                            type="number"
+                            value={marginTop}
+                            onChange={(e) =>
+                              handleMarginChange(e.target.value, setMarginTop)
+                            }
+                            min="0"
+                            step="1"
+                          />
+                          <InputGroupAddon align="inline-end">
+                            mm
+                          </InputGroupAddon>
+                        </InputGroup>
+                      </FieldContent>
+                    </Field>
+
+                    <Field>
+                      <FieldLabel>Bottom</FieldLabel>
+                      <FieldContent>
+                        <InputGroup>
+                          <InputGroupInput
+                            type="number"
+                            value={marginBottom}
+                            onChange={(e) =>
+                              handleMarginChange(
+                                e.target.value,
+                                setMarginBottom
+                              )
+                            }
+                            min="0"
+                            step="1"
+                          />
+                          <InputGroupAddon align="inline-end">
+                            mm
+                          </InputGroupAddon>
+                        </InputGroup>
+                      </FieldContent>
+                    </Field>
+
+                    <Field>
+                      <FieldLabel>Left</FieldLabel>
+                      <FieldContent>
+                        <InputGroup>
+                          <InputGroupInput
+                            type="number"
+                            value={marginLeft}
+                            onChange={(e) =>
+                              handleMarginChange(e.target.value, setMarginLeft)
+                            }
+                            min="0"
+                            step="1"
+                          />
+                          <InputGroupAddon align="inline-end">
+                            mm
+                          </InputGroupAddon>
+                        </InputGroup>
+                      </FieldContent>
+                    </Field>
+
+                    <Field>
+                      <FieldLabel>Right</FieldLabel>
+                      <FieldContent>
+                        <InputGroup>
+                          <InputGroupInput
+                            type="number"
+                            value={marginRight}
+                            onChange={(e) =>
+                              handleMarginChange(e.target.value, setMarginRight)
+                            }
+                            min="0"
+                            step="1"
+                          />
+                          <InputGroupAddon align="inline-end">
+                            mm
+                          </InputGroupAddon>
+                        </InputGroup>
+                      </FieldContent>
+                    </Field>
+                  </div>
                 </div>
               </FieldGroup>
             </AccordionContent>
