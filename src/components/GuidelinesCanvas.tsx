@@ -1,62 +1,79 @@
 import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { PAPER_SIZES, type Orientation } from './CustomSidebar';
 
 export interface GuidelinesCanvasRef {
   exportToPDF: () => void;
 }
 
-export const GuidelinesCanvas = forwardRef<GuidelinesCanvasRef, unknown>(
-  (_props, ref) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+export interface GuidelinesCanvasProps {
+  paperSize: string;
+  orientation: Orientation;
+}
 
-    useImperativeHandle(ref, () => ({
-      exportToPDF: () => {
-        // A4 dimensions: 210mm x 297mm
-        // At 300 DPI (print quality): 1mm = 300/25.4 pixels ≈ 11.811 pixels
-        const DPI = 300;
-        const MM_TO_PX = DPI / 25.4;
+export const GuidelinesCanvas = forwardRef<
+  GuidelinesCanvasRef,
+  GuidelinesCanvasProps
+>(({ paperSize, orientation }, ref) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-        const A4_WIDTH_MM = 210;
-        const A4_HEIGHT_MM = 297;
-        const RECT_SIZE_MM = 50;
+  useImperativeHandle(ref, () => ({
+    exportToPDF: () => {
+      // At 300 DPI (print quality): 1mm = 300/25.4 pixels ≈ 11.811 pixels
+      const DPI = 300;
+      const MM_TO_PX = DPI / 25.4;
 
-        const canvasWidth = Math.round(A4_WIDTH_MM * MM_TO_PX);
-        const canvasHeight = Math.round(A4_HEIGHT_MM * MM_TO_PX);
-        const rectSize = Math.round(RECT_SIZE_MM * MM_TO_PX);
+      const paperDimensions =
+        PAPER_SIZES[paperSize as keyof typeof PAPER_SIZES];
+      if (!paperDimensions) return;
 
-        // Create a high-resolution canvas for PDF export
-        const exportCanvas = document.createElement('canvas');
-        exportCanvas.width = canvasWidth;
-        exportCanvas.height = canvasHeight;
+      let widthMM: number = paperDimensions.width;
+      let heightMM: number = paperDimensions.height;
 
-        const exportCtx = exportCanvas.getContext('2d');
-        if (!exportCtx) return;
+      // Swap dimensions for landscape orientation
+      if (orientation === 'landscape') {
+        [widthMM, heightMM] = [heightMM, widthMM];
+      }
 
-        // Fill with white background
-        exportCtx.fillStyle = '#FFFFFF';
-        exportCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+      const canvasWidth = Math.round(widthMM * MM_TO_PX);
+      const canvasHeight = Math.round(heightMM * MM_TO_PX);
+      const RECT_SIZE_MM = 50;
+      const rectSize = Math.round(RECT_SIZE_MM * MM_TO_PX);
 
-        // Draw rectangle: 50x50mm, light blue background, black border, centered
-        const x = (canvasWidth - rectSize) / 2;
-        const y = (canvasHeight - rectSize) / 2;
+      // Create a high-resolution canvas for PDF export
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = canvasWidth;
+      exportCanvas.height = canvasHeight;
 
-        exportCtx.fillStyle = '#ADD8E6'; // Light blue
-        exportCtx.fillRect(x, y, rectSize, rectSize);
-        exportCtx.strokeStyle = '#000000'; // Black
-        exportCtx.lineWidth = Math.round(1 * MM_TO_PX); // 1mm border
-        exportCtx.strokeRect(x, y, rectSize, rectSize);
+      const exportCtx = exportCanvas.getContext('2d');
+      if (!exportCtx) return;
 
-        // Convert to image
-        const dataUrl = exportCanvas.toDataURL('image/png', 1.0);
+      // Fill with white background
+      exportCtx.fillStyle = '#FFFFFF';
+      exportCtx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-        // Create a new window with the image for printing
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-          alert('Please allow popups to export as PDF');
-          return;
-        }
+      // Draw rectangle: 50x50mm, light blue background, black border, centered
+      const x = (canvasWidth - rectSize) / 2;
+      const y = (canvasHeight - rectSize) / 2;
 
-        // Create HTML with exact A4 dimensions and 100% scaling
-        printWindow.document.write(`
+      exportCtx.fillStyle = '#ADD8E6'; // Light blue
+      exportCtx.fillRect(x, y, rectSize, rectSize);
+      exportCtx.strokeStyle = '#000000'; // Black
+      exportCtx.lineWidth = Math.round(1 * MM_TO_PX); // 1mm border
+      exportCtx.strokeRect(x, y, rectSize, rectSize);
+
+      // Convert to image
+      const dataUrl = exportCanvas.toDataURL('image/png', 1.0);
+
+      // Create a new window with the image for printing
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        alert('Please allow popups to export as PDF');
+        return;
+      }
+
+      // Create HTML with exact A4 dimensions and 100% scaling
+      printWindow.document.write(`
           <!DOCTYPE html>
           <html>
             <head>
@@ -65,7 +82,7 @@ export const GuidelinesCanvas = forwardRef<GuidelinesCanvasRef, unknown>(
                 @media print {
                   @page {
                     margin: 0;
-                    size: A4;
+                    size: ${widthMM}mm ${heightMM}mm;
                   }
                   body {
                     margin: 0;
@@ -82,8 +99,8 @@ export const GuidelinesCanvas = forwardRef<GuidelinesCanvasRef, unknown>(
                   background: white;
                 }
                 img {
-                  width: ${A4_WIDTH_MM}mm;
-                  height: ${A4_HEIGHT_MM}mm;
+                  width: ${widthMM}mm;
+                  height: ${heightMM}mm;
                   display: block;
                   object-fit: contain;
                 }
@@ -102,47 +119,105 @@ export const GuidelinesCanvas = forwardRef<GuidelinesCanvasRef, unknown>(
             </body>
           </html>
         `);
-        printWindow.document.close();
-      },
-    }));
+      printWindow.document.close();
+    },
+  }));
 
-    useEffect(() => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-      // Set canvas size to match container
-      const resizeCanvas = () => {
-        const container = canvas.parentElement;
-        if (container) {
-          canvas.width = container.clientWidth;
-          canvas.height = container.clientHeight;
+    const paperDimensions = PAPER_SIZES[paperSize as keyof typeof PAPER_SIZES];
+    if (!paperDimensions) return;
 
-          // Draw rectangle: 100x100, light blue background, black border, centered
-          const rectSize = 100;
-          const x = (canvas.width - rectSize) / 2;
-          const y = (canvas.height - rectSize) / 2;
+    // Calculate paper dimensions with orientation
+    let widthMM: number = paperDimensions.width;
+    let heightMM: number = paperDimensions.height;
+    if (orientation === 'landscape') {
+      [widthMM, heightMM] = [heightMM, widthMM];
+    }
 
-          ctx.fillStyle = '#ADD8E6'; // Light blue
-          ctx.fillRect(x, y, rectSize, rectSize);
-          ctx.strokeStyle = '#000000'; // Black
-          ctx.lineWidth = 1;
-          ctx.strokeRect(x, y, rectSize, rectSize);
-        }
-      };
+    // Set canvas size to match container while maintaining aspect ratio
+    const resizeCanvas = () => {
+      const container = containerRef.current;
+      if (!container) return;
 
-      resizeCanvas();
-      window.addEventListener('resize', resizeCanvas);
+      // Account for padding (p-8 = 2rem = 32px on each side)
+      const padding = 32 * 2; // 32px on each side
+      const containerWidth = container.clientWidth - padding;
+      const containerHeight = container.clientHeight - padding;
+      const aspectRatio = widthMM / heightMM;
+      const containerAspectRatio = containerWidth / containerHeight;
 
-      return () => {
-        window.removeEventListener('resize', resizeCanvas);
-      };
-    }, []);
+      let canvasWidth: number;
+      let canvasHeight: number;
 
-    return <canvas ref={canvasRef} className="w-full h-full" />;
-  }
-);
+      if (containerAspectRatio > aspectRatio) {
+        // Container is wider, fit to height
+        canvasHeight = containerHeight;
+        canvasWidth = canvasHeight * aspectRatio;
+      } else {
+        // Container is taller, fit to width
+        canvasWidth = containerWidth;
+        canvasHeight = canvasWidth / aspectRatio;
+      }
+
+      // Set canvas internal resolution to match display size
+      // This prevents distortion from CSS scaling
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+
+      // Set CSS size to match internal resolution
+      canvas.style.width = `${canvasWidth}px`;
+      canvas.style.height = `${canvasHeight}px`;
+
+      // Clear canvas
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+      // Fill with white background
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+      // Draw rectangle: 50x50mm scaled, light blue background, black border, centered
+      // Calculate scale: canvas dimensions represent paper dimensions in mm
+      // Since canvas maintains aspect ratio, both scales should be equal
+      const scaleX = canvasWidth / widthMM; // pixels per mm in X direction
+      const scaleY = canvasHeight / heightMM; // pixels per mm in Y direction
+      // Use the average to ensure square stays square (they should be equal anyway)
+      const scale = (scaleX + scaleY) / 2;
+
+      const rectSizeMM = 50;
+      const rectSize = rectSizeMM * scale;
+      const x = (canvasWidth - rectSize) / 2;
+      const y = (canvasHeight - rectSize) / 2;
+
+      ctx.fillStyle = '#ADD8E6'; // Light blue
+      ctx.fillRect(x, y, rectSize, rectSize);
+      ctx.strokeStyle = '#000000'; // Black
+      // Scale line width: 1mm border
+      ctx.lineWidth = Math.max(1, scale);
+      ctx.strokeRect(x, y, rectSize, rectSize);
+    };
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+    };
+  }, [paperSize, orientation]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="w-full h-full bg-muted flex items-center justify-center p-8"
+    >
+      <canvas ref={canvasRef} style={{ display: 'block' }} />
+    </div>
+  );
+});
 
 GuidelinesCanvas.displayName = 'GuidelinesCanvas';
