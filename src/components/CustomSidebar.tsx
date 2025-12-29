@@ -6,74 +6,51 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { useGuidelinesProperties } from '@/contexts/GuidelinesPropertiesContext';
+import { PAPER_SIZES } from '@/constants';
+import { isPaperSize } from '@/types';
 
 export type Orientation = 'portrait' | 'landscape';
 
-export const PAPER_SIZES = {
-  // US sizes
-  Letter: { width: 216, height: 279 }, // mm
-  Legal: { width: 216, height: 356 },
-  Tabloid: { width: 279, height: 432 },
-  Ledger: { width: 432, height: 279 },
-  Executive: { width: 184, height: 267 },
-  // ISO sizes (A3 and smaller)
-  A3: { width: 297, height: 420 },
-  A4: { width: 210, height: 297 },
-  A5: { width: 148, height: 210 },
-  A6: { width: 105, height: 148 },
-  A7: { width: 74, height: 105 },
-  A8: { width: 52, height: 74 },
-} as const;
-
-export interface CustomSidebarProps {
-  paperSize: string;
-  orientation: Orientation;
-  width: number;
-  height: number;
-  onPaperSizeChange: (size: string) => void;
-  onOrientationChange: (orientation: Orientation) => void;
-  onWidthChange: (width: number) => void;
-  onHeightChange: (height: number) => void;
-}
-
-export function CustomSidebar({
-  paperSize,
-  orientation,
-  width,
-  height,
-  onPaperSizeChange,
-  onOrientationChange,
-  onWidthChange,
-  onHeightChange,
-}: CustomSidebarProps) {
+export function CustomSidebar() {
+  const {
+    paperSize,
+    orientation,
+    width,
+    height,
+    setPaperSize,
+    setOrientation,
+    setWidth,
+    setHeight,
+  } = useGuidelinesProperties();
   const handlePaperSizeChange = (size: string) => {
-    onPaperSizeChange(size);
-    const paperDimensions = PAPER_SIZES[size as keyof typeof PAPER_SIZES];
-    if (paperDimensions) {
+    setPaperSize(size);
+    if (isPaperSize(size)) {
+      const paperDimensions = PAPER_SIZES[size];
       let newWidth: number = paperDimensions.width;
       let newHeight: number = paperDimensions.height;
 
-      // Apply orientation swap
+      // Apply orientation swap if in landscape
       if (orientation === 'landscape') {
         [newWidth, newHeight] = [newHeight, newWidth];
       }
 
-      onWidthChange(newWidth);
-      onHeightChange(newHeight);
+      setWidth(newWidth);
+      setHeight(newHeight);
     }
   };
 
   const handleOrientationChange = (newOrientation: Orientation) => {
-    onOrientationChange(newOrientation);
+    setOrientation(newOrientation);
     // Swap width and height when orientation changes
-    onWidthChange(height);
-    onHeightChange(width);
+    setWidth(height);
+    setHeight(width);
   };
 
   const handleWidthChange = (value: string) => {
     const numValue = parseFloat(value);
     if (!isNaN(numValue) && numValue > 0) {
-      onWidthChange(numValue);
+      setWidth(numValue);
       // Check if the new dimensions match any predefined size
       checkAndUpdatePaperSize(numValue, height);
     }
@@ -82,7 +59,7 @@ export function CustomSidebar({
   const handleHeightChange = (value: string) => {
     const numValue = parseFloat(value);
     if (!isNaN(numValue) && numValue > 0) {
-      onHeightChange(numValue);
+      setHeight(numValue);
       // Check if the new dimensions match any predefined size
       checkAndUpdatePaperSize(width, numValue);
     }
@@ -100,14 +77,14 @@ export function CustomSidebar({
 
       if (portraitMatch || landscapeMatch) {
         if (paperSize !== sizeName) {
-          onPaperSizeChange(sizeName);
+          setPaperSize(sizeName);
         }
         return;
       }
     }
     // If no match found, set to Custom
     if (paperSize !== 'Custom') {
-      onPaperSizeChange('Custom');
+      setPaperSize('Custom');
     }
   };
 
