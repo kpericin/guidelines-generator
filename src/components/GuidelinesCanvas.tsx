@@ -1,19 +1,20 @@
 import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
-import { PAPER_SIZES, type Orientation } from './CustomSidebar';
+import { type Orientation } from './CustomSidebar';
 
 export interface GuidelinesCanvasRef {
   exportToPDF: () => void;
 }
 
 export interface GuidelinesCanvasProps {
-  paperSize: string;
+  width: number;
+  height: number;
   orientation: Orientation;
 }
 
 export const GuidelinesCanvas = forwardRef<
   GuidelinesCanvasRef,
   GuidelinesCanvasProps
->(({ paperSize, orientation }, ref) => {
+>(({ width, height, orientation }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -23,12 +24,8 @@ export const GuidelinesCanvas = forwardRef<
       const DPI = 300;
       const MM_TO_PX = DPI / 25.4;
 
-      const paperDimensions =
-        PAPER_SIZES[paperSize as keyof typeof PAPER_SIZES];
-      if (!paperDimensions) return;
-
-      let widthMM: number = paperDimensions.width;
-      let heightMM: number = paperDimensions.height;
+      let widthMM: number = width;
+      let heightMM: number = height;
 
       // Swap dimensions for landscape orientation
       if (orientation === 'landscape') {
@@ -130,12 +127,9 @@ export const GuidelinesCanvas = forwardRef<
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const paperDimensions = PAPER_SIZES[paperSize as keyof typeof PAPER_SIZES];
-    if (!paperDimensions) return;
-
     // Calculate paper dimensions with orientation
-    let widthMM: number = paperDimensions.width;
-    let heightMM: number = paperDimensions.height;
+    let widthMM: number = width;
+    let heightMM: number = height;
     if (orientation === 'landscape') {
       [widthMM, heightMM] = [heightMM, widthMM];
     }
@@ -208,7 +202,7 @@ export const GuidelinesCanvas = forwardRef<
     return () => {
       window.removeEventListener('resize', resizeCanvas);
     };
-  }, [paperSize, orientation]);
+  }, [width, height, orientation]);
 
   return (
     <div
