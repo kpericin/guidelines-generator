@@ -1,5 +1,6 @@
 import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { useGuidelinesProperties } from '@/contexts/GuidelinesPropertiesContext';
+import { useTheme } from '@/hooks/useTheme';
 
 export interface GuidelinesCanvasRef {
   exportToPDF: () => void;
@@ -16,6 +17,7 @@ export const GuidelinesCanvas = forwardRef<GuidelinesCanvasRef, object>(
       marginLeft,
       marginRight,
     } = useGuidelinesProperties();
+    const { theme } = useTheme();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -276,8 +278,19 @@ export const GuidelinesCanvas = forwardRef<GuidelinesCanvasRef, object>(
       resizeCanvas();
       window.addEventListener('resize', resizeCanvas);
 
+      // Watch for class changes on document element to detect theme changes
+      const observer = new MutationObserver(() => {
+        resizeCanvas();
+      });
+
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class'],
+      });
+
       return () => {
         window.removeEventListener('resize', resizeCanvas);
+        observer.disconnect();
       };
     }, [
       width,
@@ -287,6 +300,7 @@ export const GuidelinesCanvas = forwardRef<GuidelinesCanvasRef, object>(
       marginBottom,
       marginLeft,
       marginRight,
+      theme,
     ]);
 
     return (
